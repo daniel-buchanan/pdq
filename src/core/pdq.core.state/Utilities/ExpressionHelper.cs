@@ -1,31 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using pdq.common;
-using pdq.state.Conditionals;
 
 namespace pdq.state.Utilities
 {
     internal class ExpressionHelper : IExpressionHelper
     {
-        private readonly ConstantAccess constantAccess;
-        private readonly MemberAccess memberAccess;
-        private readonly ConvertAccess convertAccess;
-        private readonly ParameterAccess parameterAccess;
-        private readonly DynamicExpressionHelper dynamicExpressionHelper;
         private readonly IReflectionHelper reflectionHelper;
 
-        public ExpressionHelper(
-            IReflectionHelper reflectionHelper)
+        public ExpressionHelper(IReflectionHelper reflectionHelper)
         {
             // setup helpers
-            this.constantAccess = new ConstantAccess();
-            this.convertAccess = new ConvertAccess();
-            this.parameterAccess = new ParameterAccess();
-            this.dynamicExpressionHelper = new DynamicExpressionHelper(this);
             this.reflectionHelper = reflectionHelper;
-            this.memberAccess = new MemberAccess(this.reflectionHelper);
         }
 
         /// <summary>
@@ -39,11 +25,11 @@ namespace pdq.state.Utilities
             switch (expression.NodeType)
             {
                 case ExpressionType.Convert:
-                    return convertAccess.GetName(expression, this);
+                    return ConvertAccess.GetName(expression, this);
                 case ExpressionType.MemberAccess:
-                    return memberAccess.GetName(expression);
+                    return MemberAccess.GetName(expression, this.reflectionHelper);
                 case ExpressionType.Constant:
-                    return memberAccess.GetName(expression);
+                    return MemberAccess.GetName(expression, this.reflectionHelper);
                 case ExpressionType.Call:
                     {
                         var call = (MethodCallExpression)expression;
@@ -157,16 +143,21 @@ namespace pdq.state.Utilities
             return EqualityOperator.Equals;
         }
 
-        public IEnumerable<DynamicPropertyInfo> GetDynamicPropertyInformation(Expression expr)
-            => this.dynamicExpressionHelper.GetProperties(expr);
+        public EqualityOperator ConvertExpressionTypeToEqualityOperator(Expression expression)
+        {
+            var binaryExpr = expression as BinaryExpression;
+            if (binaryExpr == null) return EqualityOperator.Equals;
+            return ConvertExpressionTypeToEqualityOperator(binaryExpr.NodeType);
+        }
 
+        /// <inheritdoc/>
         public object GetValue(Expression expression)
         {
             if (expression.NodeType == ExpressionType.Convert)
             {
                 try
                 {
-                    expression = convertAccess.GetExpression(expression);
+                    expression = ConvertAccess.GetExpression(expression);
                 }
                 catch
                 {
@@ -177,11 +168,11 @@ namespace pdq.state.Utilities
 
             if (expression.NodeType == ExpressionType.MemberAccess)
             {
-                return memberAccess.GetValue(expression);
+                return MemberAccess.GetValue(expression);
             }
             else if (expression.NodeType == ExpressionType.Constant)
             {
-                return constantAccess.GetValue(expression);
+                return ConstantAccess.GetValue(expression);
             }
             else if (expression.NodeType == ExpressionType.Lambda)
             {
@@ -207,19 +198,19 @@ namespace pdq.state.Utilities
         {
             if (expression.NodeType == ExpressionType.Convert)
             {
-                return convertAccess.GetType(expression, this);
+                return ConvertAccess.GetType(expression, this);
             }
             else if (expression.NodeType == ExpressionType.MemberAccess)
             {
-                return memberAccess.GetType(expression);
+                return MemberAccess.GetType(expression);
             }
             else if (expression.NodeType == ExpressionType.Constant)
             {
-                return constantAccess.GetType(expression);
+                return ConstantAccess.GetType(expression);
             }
             else if(expression.NodeType == ExpressionType.Parameter)
             {
-                return parameterAccess.GetType(expression);
+                return ParameterAccess.GetType(expression);
             }
             else if (expression.NodeType == ExpressionType.Lambda)
             {

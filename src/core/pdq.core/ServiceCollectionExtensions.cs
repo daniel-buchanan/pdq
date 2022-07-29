@@ -4,6 +4,7 @@ using pdq.common.Logging;
 using pdq.common;
 using pdq.state.Utilities;
 using pdq.common.Connections;
+using pdq.common.Exceptions;
 
 namespace pdq
 {
@@ -43,6 +44,8 @@ namespace pdq
         /// <returns></returns>
         public static IServiceCollection AddPdq(this IServiceCollection services, PdqOptions options)
         {
+            ValidateOptions(options);
+
 			services.AddSingleton(options);
 			services.AddScoped<IUnitOfWork, UnitOfWork>();
 			services.AddScoped(typeof(ILoggerProxy), options.LoggerProxyType);
@@ -51,6 +54,20 @@ namespace pdq
             services.AddScoped<ITransientFactory, TransientFactory>();
 			return services;
 		}
+
+        private static void ValidateOptions(PdqOptions options)
+        {
+            if (options == null)
+            {
+                throw new PdqOptionsInvalidException($"The provided {nameof(options)} is NULL.");
+            }
+
+            if(options.TransactionFactoryType == null ||
+               options.ConnectionFactoryType == null)
+            {
+                throw new PdqOptionsInvalidException($"An implementation must be provided for {nameof(ITransactionFactory)} and {nameof(IConnectionFactory)}");
+            }
+        }
 	}
 }
 

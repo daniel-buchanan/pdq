@@ -2,13 +2,17 @@
 
 namespace pdq
 {
-	public interface IOrderBy : IExecute
+	public interface IOrderBy :
+		IExecute,
+		ISelectColumn
 	{
 		IOrderByThen OrderBy(string column, string tableAlias, SortOrder orderBy);
 	}
 
-	public interface IOrderByThen : IExecute
-    {
+	public interface IOrderByThen :
+		IExecute,
+		ISelectColumn
+	{
 		IOrderByThen ThenBy(string column, string tableAlias, SortOrder orderBy);
 	}
 }

@@ -14,5 +14,7 @@ namespace pdq.common
 		internal IQueryContext Context { get; }
 
 		internal void SetContext(IQueryContext context);
-	}
+
+		internal PdqOptions Options { get; }
+    }
 }

@@ -12,12 +12,10 @@ namespace pdq.state.Utilities.Parsers
 		internal ParserHolder(
 			IExpressionHelper expressionHelper,
 			IReflectionHelper reflectionHelper,
-			IAliasManager aliasManager,
-			IQueryContextInternal context,
 			CallExpressionHelper callExpressionHelper)
 		{
 			this.value = new ValueParser(expressionHelper, callExpressionHelper, reflectionHelper);
-			this.join = new JoinParser(expressionHelper, reflectionHelper, aliasManager, context);
+			this.join = new JoinParser(expressionHelper, reflectionHelper);
 			this.where = new WhereParser(expressionHelper, reflectionHelper, callExpressionHelper, this.join, this.value);
 		}
 

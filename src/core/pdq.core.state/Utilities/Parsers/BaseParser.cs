@@ -17,7 +17,8 @@ namespace pdq.state.Utilities
             this.reflectionHelper = reflectionHelper;
 		}
 
-        public abstract IWhere Parse(Expression expression);
+        /// <inheritdoc/>
+        public abstract IWhere Parse(Expression expression, IQueryContextInternal context);
 
         /// <summary>
         /// This is used for the case where we are doing a column.Match<T1,T2>((t1,t2) => t1.someNullable == t2.nonNull)

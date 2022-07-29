@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Threading.Tasks;
 using pdq.common.Connections;
 
-namespace pdq.playground.Mocks
+namespace pdq.core_tests.Mocks
 {
 	public class MockConnectionDetails : ConnectionDetails
 	{

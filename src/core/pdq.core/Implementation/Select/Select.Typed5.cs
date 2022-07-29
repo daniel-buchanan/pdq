@@ -20,6 +20,7 @@ namespace pdq.Implementation
         }
 
         public static Select<T1, T2, T3, T4, T5> Create(
+            PdqOptions options,
             ISelectQueryContext context,
             IQuery query)
             => new Select<T1, T2, T3, T4, T5>(context, query);

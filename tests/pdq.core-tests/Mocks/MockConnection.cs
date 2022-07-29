@@ -5,7 +5,7 @@ using pdq.common;
 using pdq.common.Connections;
 using pdq.common.Logging;
 
-namespace pdq.playground.Mocks
+namespace pdq.core_tests.Mocks
 {
 	public class MockConnection : Connection
 	{

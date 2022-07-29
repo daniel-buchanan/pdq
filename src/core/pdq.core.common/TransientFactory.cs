@@ -10,8 +10,8 @@ namespace pdq.common
 {
 	public sealed class TransientFactory : ITransientFactory
 	{
-        private readonly bool trackTransients;
         private readonly List<ITransient> tracker;
+        private readonly PdqOptions options;
         private readonly ILoggerProxy logger;
         private readonly ITransactionFactory transactionFactory;
 
@@ -21,7 +21,7 @@ namespace pdq.common
             ITransactionFactory transactionFactory)
 		{
             this.tracker = new List<ITransient>();
-            this.trackTransients = options.TrackTransients;
+            this.options = options;
             this.logger = logger;
             this.transactionFactory = transactionFactory;
 		}
@@ -34,10 +34,10 @@ namespace pdq.common
         {
             this.logger.Debug("TransientFactory :: Getting Transaction");
             var transaction = await this.transactionFactory.GetAsync(connectionDetails);
-            var transient = Transient.Create(this, transaction, this.logger);
+            var transient = Transient.Create(this, transaction, this.logger, this.options);
             this.logger.Debug($"TransientFactory :: Transient ({transient.Id}) Tracked");
 
-            if(this.trackTransients) this.tracker.Add(transient);
+            if(this.options.TrackTransients) this.tracker.Add(transient);
 
             return transient;
         }
@@ -45,7 +45,7 @@ namespace pdq.common
         /// <inheritdoc/>
         public void Dispose()
         {
-            if (!this.trackTransients) return;
+            if (!this.options.TrackTransients) return;
 
             this.logger.Debug($"TransientFactory :: Disposing Resources, {this.tracker.Count} Transients");
             tracker.Clear();
@@ -54,7 +54,7 @@ namespace pdq.common
         /// <inheritdoc/>
         void ITransientFactory.NotifyTransientDisposed(Guid id)
         {
-            if (!this.trackTransients) return;
+            if (!this.options.TrackTransients) return;
 
             var transient = this.tracker.FirstOrDefault(t => t.Id == id);
             if (transient == null)

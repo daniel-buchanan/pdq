@@ -43,17 +43,17 @@ namespace pdq.state
         public static IWhere ParseWhere(
             this IHelperExtensions self,
             Expression expression)
-            => self.Context.Parsers.Where.Parse(expression);
+            => self.Context.Parsers.Where.Parse(expression, self.Context);
 
         public static IWhere ParseJoin(
             this IHelperExtensions self,
             Expression expression)
-            => self.Context.Parsers.Join.Parse(expression);
+            => self.Context.Parsers.Join.Parse(expression, self.Context);
 
         public static IEnumerable<DynamicPropertyInfo> GetPropertyInformation(
             this IHelperExtensions self,
             Expression obj)
-            => self.Context.ExpressionHelper.GetDynamicPropertyInformation(obj);
+            => self.Context.DynamicExpressionHelper.GetProperties(obj, self.Context);
 	}
 }
 

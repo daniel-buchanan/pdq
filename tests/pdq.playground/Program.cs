@@ -1,10 +1,11 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using pdq;
 using pdq.common;
-using pdq.playground;
-using pdq.playground.Mocks;
+using pdq.core_tests.Mocks;
+using pdq.core_tests.Models;
 
 var services = new ServiceCollection();
 services.AddPdq(o =>
@@ -24,28 +25,29 @@ using (var t = uow.Begin())
 {
     using (var q = t.Query())
     {
-        //q.Select()
-        //    .From("bob", "b")
-        //    .Column("name")
-        //    .Column("email")
-        //    .Where(b =>
-        //    {
-        //        b.ClauseHandling().DefaultToOr();
+        q.Select()
+            .From("bob", "b")
+            .Where(b =>
+            {
+                b.ClauseHandling.DefaultToOr();
 
-        //        b.Column("name").Is().EqualTo("hello");
-        //        b.Column("email").Is().Like("my name");
-        //    });
+                b.Column("name").Is().EqualTo("hello");
+                b.Column("email").Is().Like("my name");
+            })
+            .Select(b => new
+            {
+                Name = b.Is("name", "b"),
+                City = b.Is("city", "b")
+            });
 
         q.Select()
             .From<Person>(x => x)
             .Join<Address>((p, a) => p.AddressId == a.Id)
-            .Join<Person, Note>((p, n) => p.Id == n.PersonId)
-            .Where((p, a, n) => p.LastName.Contains("smith"))
-            .Select((p, a, n) => new Result
+            .Where((p, a) => p.LastName.Contains("smith"))
+            .Select((p, a) => new Result
             {
                 Name = p.FirstName,
-                City = a.City,
-                Note = n.Value
+                City = a.City
             });
 
     }

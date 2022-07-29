@@ -19,18 +19,27 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="6.7.0" />
+    <PackageReference Include="Moq" Version="4.18.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\core\pdq.core.common\pdq.common.csproj" />
     <ProjectReference Include="..\..\src\core\pdq.core.state\pdq.state.csproj" />
+    <ProjectReference Include="..\..\src\core\pdq.core\pdq.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Microsoft.NET.Test.Sdk" />
     <None Remove="coverlet.collector" />
     <None Remove="FluentAssertions" />
     <None Remove="Helpers\" />
+    <None Remove="Models\" />
+    <None Remove="Moq" />
+    <None Remove="Mocks\" />
+    <None Remove="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Helpers\" />
+    <Folder Include="Models\" />
+    <Folder Include="Mocks\" />
   </ItemGroup>
 </Project>

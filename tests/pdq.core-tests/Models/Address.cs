@@ -1,5 +1,5 @@
 ﻿using System;
-namespace pdq.playground
+namespace pdq.core_tests.Models
 {
 	public class Address
 	{

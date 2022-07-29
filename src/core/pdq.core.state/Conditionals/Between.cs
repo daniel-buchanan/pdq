@@ -12,7 +12,7 @@ namespace pdq.state.Conditionals
         }
 	}
 
-	public class Between<T> : Between
+	public class Between<T> : Between, IBetween
 	{
 		internal Between(state.Column column, T start, T end)
 		{
@@ -29,6 +29,10 @@ namespace pdq.state.Conditionals
 		public T End { get; private set; }
 
         public override Type ValueType { get; protected set; }
+
+        object IBetween.Start => Start;
+
+        object IBetween.End => End;
     }
 }
 

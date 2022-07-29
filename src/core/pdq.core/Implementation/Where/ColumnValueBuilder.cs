@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using pdq.state;
 using pdq.state.Conditionals;
+using pdq.state.Conditionals.ValueFunctions;
 
 namespace pdq.Implementation
 {
@@ -26,100 +30,53 @@ namespace pdq.Implementation
             => new ColumnValueBuilder(builder, column, notEquals);
 
         /// <inheritdoc />
-        public void EndsWith<T>(T value) => AddClause(common.EqualityOperator.EndsWith, value);
+        public void EndsWith<T>(T value) => AddClause(common.EqualityOperator.EndsWith, StringEndsWith.Create(), value);
 
         /// <inheritdoc />
-        public void EqualTo<T>(T value) => AddClause(common.EqualityOperator.Equals, value);
+        public void EqualTo<T>(T value) => AddClause(common.EqualityOperator.Equals, null, value);
 
         /// <inheritdoc />
-        public void GreaterThan(int value) => AddClause(common.EqualityOperator.GreaterThan, value);
+        public void GreaterThan<T>(T value) => AddClause(common.EqualityOperator.GreaterThan, null, value);
 
         /// <inheritdoc />
-        public void GreaterThan(uint value) => AddClause(common.EqualityOperator.GreaterThan, value);
+        public void GreaterThanOrEqualTo<T>(T value) => AddClause(common.EqualityOperator.GreaterThanOrEqualTo, null, value);
 
         /// <inheritdoc />
-        public void GreaterThan(short value) => AddClause(common.EqualityOperator.GreaterThan, value);
+        public void In<T>(params T[] values) => AddClause(values);
 
         /// <inheritdoc />
-        public void GreaterThan(double value) => AddClause(common.EqualityOperator.GreaterThan, value);
+        public void In<T>(IEnumerable<T> values) => AddClause(values);
 
         /// <inheritdoc />
-        public void GreaterThan(long value) => AddClause(common.EqualityOperator.GreaterThan, value);
-
-        /// <inheritdoc />
-        public void GreaterThan(DateTime value) => AddClause(common.EqualityOperator.GreaterThan, value);
-
-        /// <inheritdoc />
-        public void GreaterThanOrEqualTo(int value) => AddClause(common.EqualityOperator.GreaterThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void GreaterThanOrEqualTo(uint value) => AddClause(common.EqualityOperator.GreaterThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void GreaterThanOrEqualTo(short value) => AddClause(common.EqualityOperator.GreaterThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void GreaterThanOrEqualTo(double value) => AddClause(common.EqualityOperator.GreaterThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void GreaterThanOrEqualTo(long value) => AddClause(common.EqualityOperator.GreaterThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void GreaterThanOrEqualTo(DateTime value) => AddClause(common.EqualityOperator.GreaterThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void IsBetween<T>(T start, T end)
+        public void Between<T>(T start, T end)
         {
-            var between = Between.Values(this.column, start, end);
+            var between = state.Conditionals.Between.Values(this.column, start, end);
             if (this.notEquals) this.builder.AddClause(Not.This(between));
             else this.builder.AddClause(between);
         }
 
         /// <inheritdoc />
-        public void LessThan(int value) => AddClause(common.EqualityOperator.LessThan, value);
+        public void LessThan<T>(T value) => AddClause(common.EqualityOperator.LessThan, null, value);
 
         /// <inheritdoc />
-        public void LessThan(uint value) => AddClause(common.EqualityOperator.LessThan, value);
+        public void LessThanOrEqualTo<T>(T value) => AddClause(common.EqualityOperator.LessThanOrEqualTo, null, value);
 
         /// <inheritdoc />
-        public void LessThan(short value) => AddClause(common.EqualityOperator.LessThan, value);
+        public void Like<T>(T value) => AddClause(common.EqualityOperator.Like, StringContains.Create(value as string), value);
 
         /// <inheritdoc />
-        public void LessThan(double value) => AddClause(common.EqualityOperator.LessThan, value);
+        public void StartsWith<T>(T value) => AddClause(common.EqualityOperator.StartsWith, StringStartsWith.Create(), value);
 
-        /// <inheritdoc />
-        public void LessThan(long value) => AddClause(common.EqualityOperator.LessThan, value);
-
-        /// <inheritdoc />
-        public void LessThan(DateTime value) => AddClause(common.EqualityOperator.LessThan, value);
-
-        /// <inheritdoc />
-        public void LessThanOrEqualTo(int value) => AddClause(common.EqualityOperator.LessThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void LessThanOrEqualTo(uint value) => AddClause(common.EqualityOperator.LessThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void LessThanOrEqualTo(short value) => AddClause(common.EqualityOperator.LessThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void LessThanOrEqualTo(double value) => AddClause(common.EqualityOperator.LessThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void LessThanOrEqualTo(long value) => AddClause(common.EqualityOperator.LessThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void LessThanOrEqualTo(DateTime value) => AddClause(common.EqualityOperator.LessThanOrEqualTo, value);
-
-        /// <inheritdoc />
-        public void Like<T>(T value) => AddClause(common.EqualityOperator.Like, value);
-
-        /// <inheritdoc />
-        public void StartsWith<T>(T value) => AddClause(common.EqualityOperator.StartsWith, value);
-
-        private void AddClause<T>(common.EqualityOperator op, T value)
+        private void AddClause<T>(common.EqualityOperator op, IValueFunction function, T value)
         {
-            var col = new Column<T>(this.column, op, value);
+            var col = new Column<T>(this.column, op, function, value);
+            if (this.notEquals) this.builder.AddClause(Not.This(col));
+            else this.builder.AddClause(col);
+        }
+
+        private void AddClause<T>(IEnumerable<T> values)
+        {
+            var col = Values.In(this.column, values);
             if (this.notEquals) this.builder.AddClause(Not.This(col));
             else this.builder.AddClause(col);
         }

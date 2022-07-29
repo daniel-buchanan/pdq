@@ -23,81 +23,76 @@ namespace pdq.state.Utilities.Parsers
             this.valueParser = valueParser;
         }
 
-        public override state.IWhere Parse(Expression expression)
+        public override state.IWhere Parse(Expression expression, IQueryContextInternal context)
         {
-            // check to see if we have a normal where
-            if (expression.NodeType != ExpressionType.OrElse && expression.NodeType != ExpressionType.AndAlso)
+            ExpressionType nodeType;
+            BinaryExpression binaryExpr;
+            IWhere left, right;
+            Expression body;
+
+            var lambda = expression as LambdaExpression;
+            if(lambda != null)
             {
-                return Parse(expression, false);
+                nodeType = lambda.Body.NodeType;
+                body = lambda.Body;
+            }
+            else
+            {
+                nodeType = expression.NodeType;
+                body = expression;
             }
 
+            // check to see if we have a normal where
+            if (nodeType != ExpressionType.OrElse && nodeType != ExpressionType.AndAlso)
+            {
+                return Parse(expression, context, false);
+            }
+
+            
+
             // check for and
-            if (expression.NodeType == ExpressionType.AndAlso)
+            if (nodeType == ExpressionType.AndAlso)
             {
                 // get binary expression
-                var binaryExpr = (BinaryExpression)expression;
-
-                // get left and right
-                var left = Parse(binaryExpr.Left);
-                var right = Parse(binaryExpr.Right);
+                binaryExpr = body as BinaryExpression;
+                left = Parse(binaryExpr.Left, context);
+                right = Parse(binaryExpr.Right, context);
 
                 // return and
                 return And.Where(left, right);
             }
+
+            if (nodeType != ExpressionType.OrElse) return null;
+
             // check for or
-            else if (expression.NodeType == ExpressionType.OrElse)
-            {
-                // get binary expression
-                var binaryExpr = (BinaryExpression)expression;
+            // get binary expression
+            binaryExpr = body as BinaryExpression;
+            left = Parse(binaryExpr.Left, context);
+            right = Parse(binaryExpr.Right, context);
 
-                // get left and right
-                var left = Parse(binaryExpr.Left);
-                var right = Parse(binaryExpr.Right);
-
-                // return or
-                return Or.Where(left, right);
-            }
-
-            // otherwise return nothing
-            return null;
+            // return or
+            return Or.Where(left, right);
         }
 
-        private IWhere Parse(Expression expression, bool excludeAlias)
+        private IWhere Parse(Expression expression, IQueryContextInternal context, bool excludeAlias)
         {
+            var earlyResult = this.callExpressionHelper.ParseExpression(expression, context);
+            if (earlyResult != null) return earlyResult;
+
             BinaryExpression binaryExpr = null;
 
-            // check if we have a lambda
-            if (expression.NodeType == ExpressionType.Lambda)
-            {
-                var lambda = (LambdaExpression)expression;
+            if (!(expression is MemberExpression))
+                binaryExpr = expression as BinaryExpression;
 
-                // check for call expression on field
-                if (lambda.Body.NodeType == ExpressionType.Call)
-                    return this.callExpressionHelper.ParseCallExpressions(lambda.Body);
-
-                binaryExpr = (BinaryExpression)lambda.Body;
-            }
-            // check if we have a method call
-            else if (expression.NodeType == ExpressionType.Call)
-            {
-                // parse call expressions
-                return this.callExpressionHelper.ParseCallExpressions(expression);
-            }
-            else
-            {
-                // otherwise make it a binary expression
-                if (!(expression is MemberExpression)) binaryExpr = (BinaryExpression)expression;
-            }
-
-            if (binaryExpr == null) return this.valueParser.Parse(expression);
+            if (binaryExpr == null) return this.valueParser.Parse(expression, context);
 
             IWhere left, right;
 
             if (binaryExpr.NodeType == ExpressionType.AndAlso)
             {
                 // get left and right
-                left = Parse(binaryExpr.Left, excludeAlias);
-                right = Parse(binaryExpr.Right, excludeAlias);
+                left = Parse(binaryExpr.Left, context, excludeAlias);
+                right = Parse(binaryExpr.Right, context, excludeAlias);
 
                 // return and
                 return And.Where(left, right);
@@ -105,8 +100,8 @@ namespace pdq.state.Utilities.Parsers
             else if (binaryExpr.NodeType == ExpressionType.OrElse)
             {
                 // get left and right
-                left = Parse(binaryExpr.Left, excludeAlias);
-                right = Parse(binaryExpr.Right, excludeAlias);
+                left = Parse(binaryExpr.Left, context, excludeAlias);
+                right = Parse(binaryExpr.Right, context, excludeAlias);
 
                 // return or
                 return Or.Where(left, right);
@@ -127,10 +122,10 @@ namespace pdq.state.Utilities.Parsers
                                 !string.IsNullOrWhiteSpace(rightParam);
 
             if (bothMemberAccess && bothHaveParam)
-                return this.joinParser.Parse(expression);
+                return this.joinParser.Parse(binaryExpr, context);
 
             // failing that parse a value clause
-            return this.valueParser.Parse(expression);
+            return this.valueParser.Parse(binaryExpr, context);
         }
 	}
 }

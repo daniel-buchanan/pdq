@@ -1,19 +1,27 @@
 ﻿using System;
+using pdq.common;
 using pdq.common.Logging;
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("pdq.playground")]
 namespace pdq
 {
-	/// <summary>
+    /// <summary>
     /// Set of options for configuring pdq.
     /// </summary>
-	public class PdqOptions
-	{
-		/// <summary>
+    public class PdqOptions
+    {
+        /// <summary>
         /// The default log level to use, this is set to <see cref="LogLevel.Error"/>
         /// by default, unless changed.
         /// </summary>
-		public LogLevel DefaultLogLevel { get; private set; } = LogLevel.Error;
+        public LogLevel DefaultLogLevel { get; private set; } = LogLevel.Error;
+
+        /// <summary>
+        /// The default where clause handling behaviour, this is set to <see cref="ClauseHandling.And"/>.
+        /// If you want to ensure that you always set this explictly, override with <see cref="ClauseHandling.Unspecified"/> and
+        /// the <see cref="pdq.WhereBuildFailedException"/> will be thrown if you haven't set it.
+        /// </summary>
+        public ClauseHandling DefaultClauseHandling { get; private set; } = ClauseHandling.And;
 
 		/// <summary>
         /// Whether or not to track transients as they are used, and disposed.
@@ -56,6 +64,15 @@ namespace pdq
         /// be useful.
         /// </param>
         public void OverrideDefaultLogLevel(LogLevel level) => DefaultLogLevel = level;
+
+        /// <summary>
+        /// Override the default where clause handling behaviour (<see cref="ClauseHandling.And"/>), and
+        /// set to on eof the available options.
+        /// </summary>
+        /// <param name="handling">
+        /// The default where clause handling you want to use.
+        /// </param>
+        public void OverrideDefaultClauseHandling(ClauseHandling handling) => DefaultClauseHandling = handling;
 
 		/// <summary>
         /// Enable tracking of Transients throughout their lifetime, by default

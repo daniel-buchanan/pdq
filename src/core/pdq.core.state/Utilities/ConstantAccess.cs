@@ -3,14 +3,14 @@ using System.Linq.Expressions;
 
 namespace pdq.state.Utilities
 {
-    class ConstantAccess
+    static class ConstantAccess
     {
-        public object GetValue(Expression expression)
+        public static object GetValue(Expression expression)
         {
             return ((ConstantExpression)expression).Value;
         }
 
-        public Type GetType(Expression expression)
+        public static Type GetType(Expression expression)
         {
             return ((ConstantExpression)expression).Type;
         }

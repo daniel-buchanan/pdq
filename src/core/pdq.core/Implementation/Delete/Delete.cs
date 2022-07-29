@@ -13,13 +13,16 @@ namespace pdq.Implementation
 	{
         private readonly IDeleteQueryContext context;
 
-        private Delete(IQuery query) : base((IQueryInternal)query)
+        private Delete(
+            IDeleteQueryContext context,
+            IQuery query) : base((IQueryInternal)query)
         {
-            this.context = DeleteQueryContext.Create(this.query.AliasManager);
+            this.context = context;
             this.query.SetContext(this.context);
         }
 
-        public static Delete Create(IQuery query) => new Delete(query);
+        public static Delete Create(IDeleteQueryContext context, IQuery query)
+            => new Delete(context, query);
 
         /// <inheritdoc />
         public IDeleteFrom From(string name, string alias = null, string schema = null)
@@ -55,7 +58,7 @@ namespace pdq.Implementation
         /// <inheritdoc />
         public IDeleteFrom Where(Action<IWhereBuilder> builder)
         {
-            var b = WhereBuilder.Create(this.context);
+            var b = WhereBuilder.Create(this.query.Options, this.context);
             builder(b);
             context.Where(b.GetClauses().First());
             return this;

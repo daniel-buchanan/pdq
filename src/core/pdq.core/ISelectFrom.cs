@@ -3,9 +3,9 @@
 namespace pdq
 {
 	public interface ISelectFrom :
-		ISelectColumn<ISelectFrom>,
-		IJoin<ISelectFrom>
+		ISelectColumn,
+		IJoin
 	{
-		IOrderBy Where(Action<IWhereBuilder> builder);
+		IGroupBy Where(Action<IWhereBuilder> builder);
 	}
 }

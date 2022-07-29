@@ -8,15 +8,18 @@ namespace pdq.common
 		private readonly ILoggerProxy logger;
 		private readonly ITransient transient;
 		private readonly IAliasManager aliasManager;
+		private readonly PdqOptions options;
 		private IQueryContext context;
 
 		private Query(
+			PdqOptions options,
 			ILoggerProxy logger,
 			ITransient transient)
 		{
 			this.logger = logger;
 			this.transient = transient;
 			this.aliasManager = AliasManager.Create();
+			this.options = options;
 
 			Id = Guid.NewGuid();
 			Status = QueryStatus.Empty;
@@ -34,9 +37,12 @@ namespace pdq.common
 
         IQueryContext IQueryInternal.Context => this.context;
 
+        PdqOptions IQueryInternal.Options => this.options;
+
         string IQueryInternal.GetHash() => this.Id.ToString("N");
 
-		public static IQuery Create(ILoggerProxy logger, ITransient transient) => new Query(logger, transient);
+		public static IQuery Create(PdqOptions options, ILoggerProxy logger, ITransient transient)
+			=> new Query(options, logger, transient);
 
 		void IQueryInternal.SetContext(IQueryContext context) => this.context = context;
 

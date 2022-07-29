@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using pdq.common;
@@ -12,237 +13,299 @@ namespace pdq.state.Utilities
     {
         private readonly IExpressionHelper expressionHelper;
 
-        public CallExpressionHelper(IExpressionHelper expressionHelper)
+        public CallExpressionHelper(
+            IExpressionHelper expressionHelper)
         {
             this.expressionHelper = expressionHelper;
         }
 
-        public state.IWhere ParseCallExpressions(Expression expr)
+        public state.IWhere ParseExpression(Expression expression, IQueryContextInternal context)
         {
-            // get method call expression
-            var call = (MethodCallExpression)expr;
+            Expression expressionToParse;
+            if (expression is LambdaExpression)
+            {
+                var lambda = expression as LambdaExpression;
+                var unary = lambda.Body as UnaryExpression;
+                if (unary?.NodeType == ExpressionType.Not)
+                {
+                    expressionToParse = Expression.Equal(unary.Operand, Expression.Constant(false));
+                }
+                else
+                {
+                    expressionToParse = lambda.Body;
+                }
+            }
+            else
+            {
+                expressionToParse = expression;
+            }
 
-            var arg = call.Arguments[0];
-            var nodeType = arg.NodeType;
+            if(IsMethodCallOnProperty(expressionToParse))
+            {
+                var binaryExpression = expressionToParse as BinaryExpression;
+                if(binaryExpression == null)
+                {
+                    var constantExpression = Expression.Constant(true);
+                    binaryExpression = Expression.Equal(expressionToParse, constantExpression);
+                }
+                return ParseBinaryExpression(binaryExpression, context);
+            }
 
-            // check for contains
-            if (call.Method.Name == "Contains" && nodeType == ExpressionType.MemberAccess)
-                return ParseContainsMemberAccessCall(call);
-            if (call.Method.Name == "Contains" && nodeType == ExpressionType.Constant)
-                return ParseContainsConstantCall(call);
-            
-            // otherwise return null
+            if(IsMethodCallOnConstantOrMemberAccess(expressionToParse))
+            {
+                var binaryExpression = expressionToParse as BinaryExpression;
+                if (binaryExpression == null)
+                {
+                    return ParseMethodAccessCall(expressionToParse, context);
+                }
+
+                var call = binaryExpression.Left as MethodCallExpression ??
+                           binaryExpression.Right as MethodCallExpression;
+                var constant = binaryExpression.Left as ConstantExpression ??
+                               binaryExpression.Right as ConstantExpression;
+                var result = ParseMethodAccessCall(call, context);
+                var constantValue = (bool)this.expressionHelper.GetValue(constant);
+
+                if (binaryExpression.NodeType == ExpressionType.NotEqual ||
+                    !constantValue)
+                    return Not.This(result);
+
+                return result;
+            }
+
+            return ParseBinaryExpression(expressionToParse, context);
+        }
+
+        public IValueFunction ParseFunction(Expression expression)
+        {
+            var callExpression = expression as MethodCallExpression;
+            if (callExpression == null) return null;
+
+            switch(callExpression.Method.Name)
+            {
+                case SupportedMethods.ToLower:
+                    return ToLower.Create();
+                case SupportedMethods.ToUpper:
+                    return ToUpper.Create();
+                case SupportedMethods.DatePart:
+                    return ParseDatePart(callExpression);
+                case SupportedMethods.Contains:
+                    return ParseContains(callExpression);
+                case SupportedMethods.Substring:
+                    return ParseSubString(callExpression);
+            }
+
             return null;
         }
 
-        public state.IWhere ParseBinaryCallExpressions(BinaryExpression expr)
+        private bool IsMethodCallOnProperty(Expression expression)
         {
-            var left = expr.Left;
-            var right = expr.Right;
-            var nodeType = expr.NodeType;
-
-            MethodCallExpression callExpr = null;
-            Expression nonCallExpr = null;
-
-            if (left.NodeType == ExpressionType.Call)
+            var methodCallExpression = expression as MethodCallExpression;
+            var binaryExpression = expression as BinaryExpression;
+            if(binaryExpression != null)
             {
-                callExpr = (MethodCallExpression)left;
-                nonCallExpr = right;
+                var call = binaryExpression.Left as MethodCallExpression ??
+                           binaryExpression.Right as MethodCallExpression;
+                var constant = binaryExpression.Left as ConstantExpression ??
+                               binaryExpression.Right as ConstantExpression;
+
+                if (call is null || constant is null) return false;
+                methodCallExpression = call;
             }
-            else if (right.NodeType == ExpressionType.Call)
+
+            if (methodCallExpression == null) return false;
+            if (methodCallExpression.Arguments.Count == 0) return false;
+
+            if (methodCallExpression.Object is MemberExpression &&
+                methodCallExpression.Arguments.All(a => a.NodeType == ExpressionType.Constant) ||
+                methodCallExpression.Arguments.All(a => a.NodeType == ExpressionType.MemberAccess))
             {
-                callExpr = (MethodCallExpression)right;
-                nonCallExpr = left;
+                var memberExpression = methodCallExpression.Object as MemberExpression ??
+                    methodCallExpression.Arguments[0] as MemberExpression;
+                var innerExpression = memberExpression?.Expression as ConstantExpression;
+                return innerExpression is null;
             }
+
+            var lastArgument = methodCallExpression.Arguments.Last();
+            return lastArgument.NodeType == ExpressionType.MemberAccess ||
+                   lastArgument.NodeType == ExpressionType.Constant;
+        }
+
+        private bool IsMethodCallOnConstantOrMemberAccess(Expression expression)
+        {
+            var methodCallExpression = expression as MethodCallExpression;
+            if (methodCallExpression == null)
+            {
+                var binaryExpression = expression as BinaryExpression;
+                methodCallExpression = binaryExpression.Left as MethodCallExpression ??
+                                       binaryExpression.Right as MethodCallExpression;
+
+                if (methodCallExpression is null) return false;
+            }
+
+            if (methodCallExpression.Arguments.Count == 0) return false;
+
+            var firstArgument = methodCallExpression.Arguments.First();
+            return firstArgument.NodeType == ExpressionType.MemberAccess ||
+                   firstArgument.NodeType == ExpressionType.Constant;
+        }
+
+        private state.IWhere ParseBinaryExpression(
+            Expression expression,
+            IQueryContextInternal context)
+        {
+            GetCallAndNonCallExpressions(
+                expression,
+                out var callExpr,
+                out var nonCallExpr);
 
             if (callExpr == null) return null;
 
-            if (callExpr.Method.Name == "DatePart") return ParseDatePartCall(nodeType, callExpr, nonCallExpr);
-            if (callExpr.Method.Name == "ToLower") return ParseCaseCall(nodeType, callExpr, nonCallExpr);
-            if (callExpr.Method.Name == "ToUpper") return ParseCaseCall(nodeType, callExpr, nonCallExpr);
-            if (callExpr.Method.Name == "Substring") return ParseSubStringCall(nodeType, callExpr, nonCallExpr);
-            if (callExpr.Method.Name == "Contains") return ParseStringContainsCall(callExpr, nonCallExpr);
+            var valueFunction = ParseFunction(callExpr);
+            if (valueFunction == null) return null;
 
-            return null;
-        }
+            var memberExpression = callExpr.Object as MemberExpression ??
+                                   callExpr.Arguments.First() as MemberExpression;
 
-        private state.IWhere ParseStringContainsCall(
-            MethodCallExpression callExpr,
-            Expression nonCallExpr)
-        {
-            var arg = callExpr.Arguments[0];
-            var body = callExpr.Object;
+            var op = this.expressionHelper.ConvertExpressionTypeToEqualityOperator(expression);
+            var fieldName = this.expressionHelper.GetName(memberExpression);
+            var target = context.GetQueryTarget(memberExpression);
+            var col = state.Column.Create(fieldName, target);
 
-            var memberAccessExp = body as MemberExpression;
-
-            // get alias and field name
-            var alias = this.expressionHelper.GetParameterName(memberAccessExp);
-            var fieldName = this.expressionHelper.GetName(memberAccessExp);
-            var value = this.expressionHelper.GetValue(arg) as string;
-
-            if (nonCallExpr.NodeType != ExpressionType.Constant) return null;
-
-            var constValue = (bool)this.expressionHelper.GetValue(nonCallExpr);
-            var op = constValue ? EqualityOperator.Like : EqualityOperator.NotLike;
-
-            var col = state.Column.Create(fieldName, state.QueryTargets.TableTarget.Create(alias));
-
-            if (value == null && op == EqualityOperator.NotLike)
-                return Conditionals.Column.NotLike<string>(col, null, StringContains.Create());
-            if (value == null)
-                return Conditionals.Column.Like<string>(col, null, StringContains.Create());
-            if (op == EqualityOperator.Like)
-                return Conditionals.Column.Like(col, value, StringContains.Create());
-            else return Conditionals.Column.NotLike(col, value, StringContains.Create());
-        }
-
-        private state.IWhere ParseDatePartCall(
-            ExpressionType nodeType,
-            MethodCallExpression callExpr,
-            Expression nonCallExpr)
-        {
-            var arguments = callExpr.Arguments;
-            var objectExpression = arguments[0];
-            var datePartExpression = arguments[1];
-            var op = this.expressionHelper.ConvertExpressionTypeToEqualityOperator(nodeType);
-
-            var dpAlias = this.expressionHelper.GetParameterName(objectExpression);
-            var dpField = this.expressionHelper.GetName(objectExpression);
-            var dp = (common.DatePart)this.expressionHelper.GetValue(datePartExpression);
-
-            var col = state.Column.Create(dpField, state.QueryTargets.TableTarget.Create(dpAlias));
-
-            if (nonCallExpr.NodeType == ExpressionType.Constant)
-            {
-                var value = (int)this.expressionHelper.GetValue(nonCallExpr);
-                return Conditionals.Column.ValueMatch(col, op, value, state.Conditionals.ValueFunctions.DatePart.Create(dp));
-            }
-
-            if (nonCallExpr.NodeType == ExpressionType.MemberAccess)
-            {
-                var member = (MemberExpression) nonCallExpr;
-                if (member.Expression.NodeType == ExpressionType.Constant)
-                {
-                    var value = (int)this.expressionHelper.GetValue(member);
-                    return Conditionals.Column.ValueMatch(col, op, value, state.Conditionals.ValueFunctions.DatePart.Create(dp));
-                }
-
-                var mAlias = this.expressionHelper.GetParameterName(nonCallExpr);
-                var mField = this.expressionHelper.GetName(nonCallExpr);
-                col = state.Column.Create(mField, state.QueryTargets.TableTarget.Create(mAlias));
-
-                return Conditionals.Column.ValueMatch(col, op, 0, state.Conditionals.ValueFunctions.DatePart.Create(dp));
-            }
-
-            return null;
-        }
-
-        private ValueFunction ConvertMethodNameToValueFunction(string method)
-        {
-            if (method == "ToLower") return ValueFunction.ToLower;
-            if (method == "ToUpper") return ValueFunction.ToUpper;
-            if (method == "DatePart") return ValueFunction.DatePart;
-            if (method == "Substring") return ValueFunction.Substring;
-
-            return ValueFunction.None;
-        }
-
-        private state.IValueFunction ConvertMethodNameToValueFunctionImpl(ValueFunction function)
-        {
-            switch(function)
-            {
-                case ValueFunction.ToLower: return ToLower.Create();
-                case ValueFunction.ToUpper: return ToUpper.Create();
-                default: return null;
-            }
-        }
-
-        private state.IWhere ParseCaseCall(
-            ExpressionType nodeType,
-            MethodCallExpression callExpr,
-            Expression nonCallExpr)
-        {
-            var body = callExpr.Object;
-            var alias = this.expressionHelper.GetParameterName(body);
-            var field = this.expressionHelper.GetName(body);
-            var op = this.expressionHelper.ConvertExpressionTypeToEqualityOperator(nodeType);
-            var col = state.Column.Create(field, state.QueryTargets.TableTarget.Create(alias));
-
-            var func = ConvertMethodNameToValueFunction(callExpr.Method.Name);
-
-            if (func == ValueFunction.None) return null;
-            var funcImplementation = ConvertMethodNameToValueFunctionImpl(func);
-
+            IWhere result = null;
+            var invertResult = op == EqualityOperator.NotEquals;
 
             if (nonCallExpr.NodeType == ExpressionType.Constant)
             {
                 var value = this.expressionHelper.GetValue(nonCallExpr);
-                var functionType = typeof(Conditionals.Column<>);
+
+                if(value is bool)
+                {
+                    var boolValue = (bool)value;
+                    if(!boolValue && op == EqualityOperator.Equals)
+                    {
+                        value = invertResult = true;
+                    }
+                }
+
+                var functionType = typeof(Column<>);
                 var implementedType = functionType.MakeGenericType(value.GetType());
-                return (state.IWhere)Activator.CreateInstance(implementedType, new object[] { col, op, value, funcImplementation });
+                var parameters = new object[] { col, op, valueFunction, value };
+                var bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+                result = (state.IWhere)Activator.CreateInstance(
+                    implementedType,
+                    bindingFlags,
+                    null,
+                    parameters,
+                    System.Globalization.CultureInfo.CurrentCulture);
             }
 
             if (nonCallExpr.NodeType == ExpressionType.MemberAccess)
             {
-                var aliasB = this.expressionHelper.GetParameterName(nonCallExpr);
                 var fieldB = this.expressionHelper.GetName(nonCallExpr);
-                var right = state.Column.Create(fieldB, state.QueryTargets.TableTarget.Create(aliasB));
-                return Conditionals.Column.Match(col, op, funcImplementation, right);
+                var targetB = context.GetQueryTarget(nonCallExpr);
+                var colB = state.Column.Create(fieldB, targetB);
+                result = Conditionals.Column.Equals(col, op, valueFunction, colB);
             }
 
             if (nonCallExpr.NodeType == ExpressionType.Call)
             {
-                var rightCallExpr = (MethodCallExpression)nonCallExpr;
+                var rightCallExpr = nonCallExpr as MethodCallExpression;
                 var rightBody = rightCallExpr.Object;
-                var aliasB = this.expressionHelper.GetParameterName(rightBody);
                 var fieldB = this.expressionHelper.GetName(rightBody);
-                var methodB = ConvertMethodNameToValueFunction(rightCallExpr.Method.Name);
-                if (methodB == ValueFunction.None) return null;
+                var targetB = context.GetQueryTarget(rightBody);
+                var colB = state.Column.Create(fieldB, targetB);
+                valueFunction = ParseFunction(rightCallExpr);
 
-                var right = state.Column.Create(fieldB, state.QueryTargets.TableTarget.Create(aliasB));
-                funcImplementation = ConvertMethodNameToValueFunctionImpl(methodB);
-
-                return Conditionals.Column.Match(col, op, funcImplementation, right);
+                result = Conditionals.Column.Equals(col, op, valueFunction, colB);
             }
 
-            return null;
+            if (invertResult) return Not.This(result);
+
+            return result;
         }
 
-        private state.IWhere ParseSubStringCall(
-            ExpressionType nodeType,
-            MethodCallExpression callExpr,
-            Expression nonCallExpr)
+        private void GetCallAndNonCallExpressions(
+            Expression expression,
+            out MethodCallExpression callExpr,
+            out Expression nonCallExpr)
         {
-            var arguments = callExpr.Arguments;
+            callExpr = null;
+            nonCallExpr = null;
+
+            var binaryExpr = expression as BinaryExpression;
+            if (binaryExpr == null)
+            {
+                var lambda = expression as LambdaExpression;
+                binaryExpr = lambda.Body as BinaryExpression;
+            }
+
+            if (binaryExpr == null) return;
+
+            var left = binaryExpr.Left;
+            var right = binaryExpr.Right;
+
+            if (left.NodeType == ExpressionType.Call)
+            {
+                callExpr = left as MethodCallExpression;
+                nonCallExpr = right;
+            }
+            else if (right.NodeType == ExpressionType.Call)
+            {
+                callExpr = right as MethodCallExpression;
+                nonCallExpr = left;
+            }
+        }
+
+        private IValueFunction ParseContains(MethodCallExpression expression)
+        {
+            var arg = expression.Arguments[0];
+            var value = this.expressionHelper.GetValue(arg) as string;
+            return StringContains.Create(value);
+        }
+
+        private IValueFunction ParseDatePart(MethodCallExpression expression)
+        {
+            var arguments = expression.Arguments;
+            var datePartExpression = arguments[1];
+            var dp = (common.DatePart)this.expressionHelper.GetValue(datePartExpression);
+            return Conditionals.ValueFunctions.DatePart.Create(dp);
+        }
+
+        private IValueFunction ParseSubString(MethodCallExpression expression)
+        {
+            var arguments = expression.Arguments;
             var startExpression = arguments[0];
             Expression lengthExpression = null;
             if (arguments.Count > 1) lengthExpression = arguments[1];
 
-            var op = this.expressionHelper.ConvertExpressionTypeToEqualityOperator(nodeType);
-
-            var alias = this.expressionHelper.GetParameterName(callExpr);
-            var field = this.expressionHelper.GetName(callExpr);
-            var col = state.Column.Create(field, state.QueryTargets.TableTarget.Create(alias));
-
             var startValue = (int)this.expressionHelper.GetValue(startExpression);
-
-            if (nonCallExpr.NodeType == ExpressionType.Constant)
+            if (lengthExpression != null)
             {
-                var value = (string) this.expressionHelper.GetValue(nonCallExpr);
-
-                if (lengthExpression != null)
-                {
-                    var lengthValue = (int) this.expressionHelper.GetValue(lengthExpression);
-                    return Conditionals.Column.ValueMatch(col, op, value, Substring.Create(startValue, lengthValue));
-                }
-
-                return Conditionals.Column.ValueMatch(col, op, value, Substring.Create(startValue));
+                var lengthValue = (int)this.expressionHelper.GetValue(lengthExpression);
+                return Substring.Create(startValue, lengthValue);
             }
 
-            return null;
+            return Substring.Create(startValue);
         }
 
-        private state.IWhere ParseContainsMemberAccessCall(MethodCallExpression call)
+        private state.IWhere ParseMethodAccessCall(Expression expression, IQueryContextInternal context)
+        {
+            var callExpression = expression as MethodCallExpression;
+            if (callExpression == null) return null;
+
+            IWhere result = null;
+            switch(callExpression.Method.Name)
+            {
+                case SupportedMethods.Contains:
+                    result = ParseVariableContainsAsValuesIn(callExpression, context);
+                    break;
+            }
+
+            return result;
+        }
+
+        private state.IWhere ParseVariableContainsAsValuesIn(MethodCallExpression call, IQueryContextInternal context)
         {
             var arg = call.Arguments[0];
             if (arg.NodeType != ExpressionType.MemberAccess) return null;
@@ -260,16 +323,7 @@ namespace pdq.state.Utilities
             else
             {
                 // check for passed in variable
-                var firstArgument = call.Arguments[0] as MemberExpression;
-                if (firstArgument != null &&
-                    firstArgument.Expression.NodeType == ExpressionType.Constant)
-                {
-                    // check if underlying value is a constant
-                    return ParseContainsConstantCall(call);
-                }
-
-                // otherwise default to member access
-                memberAccessExp = firstArgument;
+                memberAccessExp = call.Arguments[0] as MemberExpression;
                 valueAccessExp = call.Object;
             }
 
@@ -280,7 +334,6 @@ namespace pdq.state.Utilities
             object values = this.expressionHelper.GetValue(valueMember);
 
             // get alias and field name
-            var alias = this.expressionHelper.GetParameterName(memberAccessExp);
             var fieldName = this.expressionHelper.GetName(memberAccessExp);
 
             // setup arguments
@@ -289,34 +342,20 @@ namespace pdq.state.Utilities
             var inputGenericType = typeof(List<>);
             var inputType = inputGenericType.MakeGenericType(typeArgs);
             var input = Activator.CreateInstance(inputType, new object[] { values });
-            var col = state.Column.Create(fieldName, state.QueryTargets.TableTarget.Create(alias));
+            var target = context.GetQueryTarget(memberAccessExp);
+            var col = state.Column.Create(fieldName, target);
 
             var parameters = new object[] { col, input };
+            var enumerableGenericType = typeof(IEnumerable<>);
+            var enumerableType = enumerableGenericType.MakeGenericType(typeArgs);
 
             // get generic type
-            var toCreate = typeof(Values<>);
+            var toCreate = typeof(InValues<>);
             var genericToCreate = toCreate.MakeGenericType(typeArgs);
+            var parameterTypes = new[] { col.GetType(), enumerableType };
+            var bindingFlags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
 
-            var constructors = genericToCreate.GetConstructors();
-            ConstructorInfo ctor = null;
-            for (var i = 0; i < constructors.Length; i++)
-            {
-                var ctorParameters = constructors[i].GetParameters();
-
-                if (ctorParameters.Length != parameters.Length)
-                    continue;
-
-                var useCtor = true;
-
-                for (var p = 0; p < ctorParameters.Length; p++)
-                {
-                    useCtor &= ctorParameters[p].ParameterType == parameters[p].GetType();
-                }
-
-                if (!useCtor) continue;
-
-                ctor = constructors[i];
-            }
+            var ctor = genericToCreate.GetConstructor(bindingFlags, null, parameterTypes, null);
 
             if (ctor == null) return null;
 
@@ -324,23 +363,13 @@ namespace pdq.state.Utilities
             return (state.IWhere)ctor.Invoke(parameters);
         }
 
-        private state.IWhere ParseContainsConstantCall(MethodCallExpression call)
+        public static class SupportedMethods
         {
-            var arg = call.Arguments[0];
-            var body = call.Object;
-
-            var memberAccessExp = body as MemberExpression;
-
-            // get alias and field name
-            var alias = this.expressionHelper.GetParameterName(memberAccessExp);
-            var fieldName = this.expressionHelper.GetName(memberAccessExp);
-            var value = this.expressionHelper.GetValue(arg);
-            var col = state.Column.Create(fieldName, state.QueryTargets.TableTarget.Create(alias));
-
-            if (value == null)
-                return Conditionals.Column.Like<string>(col, null, StringContains.Create());
-
-            return Conditionals.Column.Like<string>(col, (string)value, StringContains.Create());
+            public const string DatePart = "DatePart";
+            public const string ToLower = "ToLower";
+            public const string ToUpper = "ToUpper";
+            public const string Contains = "Contains";
+            public const string Substring = "Substring";
         }
     }
 }

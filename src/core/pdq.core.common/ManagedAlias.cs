@@ -1,4 +1,6 @@
-﻿namespace pdq.common
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("pdq.core-tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("pdq.state")]
+namespace pdq.common
 {
     internal class ManagedAlias
     {

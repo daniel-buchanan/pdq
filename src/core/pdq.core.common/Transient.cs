@@ -12,17 +12,20 @@ namespace pdq.common
         private readonly ITransaction transaction;
         private readonly ITransientFactory factory;
         private readonly ILoggerProxy logger;
+        private readonly PdqOptions options;
         private readonly List<IQuery> queries;
 
 		private Transient(
             ITransientFactory factory,
             ITransaction transaction,
-            ILoggerProxy logger)
+            ILoggerProxy logger,
+            PdqOptions options)
 		{
             this.factory = factory;
             this.connection = transaction.Connection;
             this.transaction = transaction;
             this.logger = logger;
+            this.options = options;
             this.queries = new List<IQuery>();
 
             Id = Guid.NewGuid();
@@ -41,7 +44,9 @@ namespace pdq.common
         public static ITransient Create(
             ITransientFactory factory,
             ITransaction transaction,
-            ILoggerProxy logger) => new Transient(factory, transaction, logger);
+            ILoggerProxy logger,
+            PdqOptions options)
+            => new Transient(factory, transaction, logger, options);
 
         /// <inheritdoc />
         public void Dispose()
@@ -92,7 +97,7 @@ namespace pdq.common
         /// <inheritdoc />
         public IQuery Query()
         {
-            var query = common.Query.Create(logger, this);
+            var query = common.Query.Create(this.options, logger, this);
             this.logger.Debug($"Transient({Id}) :: Creating new Query");
             this.queries.Add(query);
             return query;

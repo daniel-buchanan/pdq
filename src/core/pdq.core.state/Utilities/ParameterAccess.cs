@@ -3,9 +3,9 @@ using System.Linq.Expressions;
 
 namespace pdq.state.Utilities
 {
-    class ParameterAccess
+    static class ParameterAccess
     {
-        public object GetValue(Expression expression)
+        public static object GetValue(Expression expression)
         {
             var objectMember = Expression.Convert(expression, expression.Type);
             var getterLambda = Expression.Lambda(objectMember);
@@ -22,14 +22,14 @@ namespace pdq.state.Utilities
             }
         }
 
-        public Type GetType(Expression expression)
+        public static Type GetType(Expression expression)
         {
             var parameterExpression = expression as ParameterExpression;
             if (parameterExpression == null) return null;
             return parameterExpression.Type;
         }
 
-        public string GetName(Expression expression)
+        public static string GetName(Expression expression)
         {
             var parameterExpression = expression as ParameterExpression;
             if (parameterExpression == null) return null;

@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Threading.Tasks;
 using pdq.common.Connections;
 using pdq.common.Logging;
 
-namespace pdq.playground.Mocks
+namespace pdq.core_tests.Mocks
 {
 	public class MockTransactionFactory : TransactionFactory
 	{

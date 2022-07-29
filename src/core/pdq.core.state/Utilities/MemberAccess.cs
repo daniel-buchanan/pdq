@@ -3,16 +3,9 @@ using System.Linq.Expressions;
 
 namespace pdq.state.Utilities
 {
-    class MemberAccess
+    static class MemberAccess
     {
-        private readonly IReflectionHelper reflectionHelper;
-
-        public MemberAccess(IReflectionHelper reflectionHelper)
-        {
-            this.reflectionHelper = reflectionHelper;
-        }
-
-        public object GetValue(Expression expression)
+        public static object GetValue(Expression expression)
         {
             var objectMember = Expression.Convert(expression, expression.Type);
             var getterLambda = Expression.Lambda(objectMember);
@@ -29,15 +22,15 @@ namespace pdq.state.Utilities
             }
         }
 
-        public Type GetType(Expression expression)
+        public static Type GetType(Expression expression)
         {
             return ((MemberExpression)expression).Type;
         }
 
-        public string GetName(Expression expression)
+        public static string GetName(Expression expression, IReflectionHelper helper)
         {
             var memberExpr = (MemberExpression)expression;
-            return this.reflectionHelper.GetFieldName(memberExpr.Member);
+            return helper.GetFieldName(memberExpr.Member);
         }
     }
 }

@@ -9,7 +9,8 @@ namespace pdq
 	{
         ISelectFromTyped<T, TDestination> Join<TDestination>(Expression<Func<T, TDestination, bool>> joinExpression, JoinType type = JoinType.Default);
         ISelectFromTyped<T, TDestination> Join<TDestination>(Action<ISelectWithAlias> query, Expression<Func<T, TDestination, bool>> joinExpression, JoinType type = JoinType.Default);
-	}
+        ISelectFromTyped<T, TDestination> Join<TDestination>(Func<ISelectWithAlias, Expression<Func<T, TDestination, bool>>> query, JoinType type = JoinType.Default);
+    }
 
     public interface IJoinTyped<T1, T2>
     {

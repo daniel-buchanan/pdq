@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
   </PropertyGroup>
 
@@ -12,8 +12,15 @@
     <ProjectReference Include="..\..\src\extensions\pdq.services\pdq.services.csproj" />
     <ProjectReference Include="..\..\src\core\pdq.core.state\pdq.state.csproj" />
     <ProjectReference Include="..\..\src\core\pdq.core\pdq.csproj" />
+    <ProjectReference Include="..\pdq.core-tests\pdq.core-tests.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Moq" Version="4.18.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Mocks\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Mocks\" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using pdq.common;
 
 namespace pdq
 {
@@ -11,11 +12,13 @@ namespace pdq
 
 		IWhereBuilder Or(Action<IWhereBuilder> builder);
 
-		IClauseHandlingBehaviour ClauseHandling();
+		IClauseHandlingBehaviour ClauseHandling { get; }
 
 		internal void AddClause(state.IWhere item);
 
 		internal IEnumerable<state.IWhere> GetClauses();
+
+		internal ClauseHandling DefaultClauseHandling { get; }
 	}
 }
 

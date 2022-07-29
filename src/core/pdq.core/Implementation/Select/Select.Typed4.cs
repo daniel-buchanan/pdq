@@ -35,21 +35,21 @@ namespace pdq.Implementation
         public ISelectFromTyped<T1, T2, T3, T4, TDestination> Join<TDestination>(Expression<Func<T4, TDestination, bool>> joinExpression, JoinType type = JoinType.Default)
         {
             this.AddJoin<T4, TDestination>(joinExpression, type);
-            return Select<T1, T2, T3, T4, TDestination>.Create(this.context, this.query);
+            return Select<T1, T2, T3, T4, TDestination>.Create(this.options, this.context, this.query);
         }
 
         /// <inheritdoc/>
         public ISelectFromTyped<T1, T2, T3, T4, TDestination> Join<T, TDestination>(Expression<Func<T, TDestination, bool>> joinExpression, JoinType type = JoinType.Default) where T : T1
         {
             this.AddJoin<T, TDestination>(joinExpression, type);
-            return Select<T1, T2, T3, T4, TDestination>.Create(this.context, this.query);
+            return Select<T1, T2, T3, T4, TDestination>.Create(this.options, this.context, this.query);
         }
 
         /// <inheritdoc/>
         public ISelectFromTyped<T1, T2, T3, T4, TDestination> Join<TDestination>(Action<ISelectWithAlias> query, Expression<Func<T4, TDestination, bool>> joinExpression, JoinType type = JoinType.Default)
         {
             this.AddJoin<T4, TDestination>(query, joinExpression, type);
-            return Select<T1, T2, T3, T4, TDestination>.Create(this.context, this.query);
+            return Select<T1, T2, T3, T4, TDestination>.Create(this.options, this.context, this.query);
         }
 
         /// <inheritdoc/>

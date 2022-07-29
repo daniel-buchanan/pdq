@@ -8,21 +8,14 @@ namespace pdq.state.Utilities.Parsers
 {
 	internal class JoinParser : BaseParser
 	{
-        private readonly IAliasManager aliasManager;
-        private readonly IQueryContextInternal context;
-
         public JoinParser(
             IExpressionHelper expressionHelper,
-            IReflectionHelper reflectionHelper,
-            IAliasManager aliasManager,
-            IQueryContextInternal context)
+            IReflectionHelper reflectionHelper)
             : base(expressionHelper, reflectionHelper)
         {
-            this.aliasManager = aliasManager;
-            this.context = context;
         }
 
-        public override IWhere Parse(Expression expression)
+        public override IWhere Parse(Expression expression, IQueryContextInternal context)
         {
             BinaryExpression binaryExpression = null;
             LambdaExpression lambdaExpression = null;
@@ -39,28 +32,13 @@ namespace pdq.state.Utilities.Parsers
             }
 
             IWhere result;
-            if (ParseAndOr(binaryExpression, out result)) return result;
-            if (ParseLambdaClause(lambdaExpression, binaryExpression, out result)) return result;
+            if (ParseAndOr(binaryExpression, context, out result)) return result;
+            if (ParseLambdaClause(lambdaExpression, binaryExpression, context, out result)) return result;
 
-            return ParseSimpleBinary(expression);
+            return ParseSimpleBinary(expression, context);
         }
 
-        protected IQueryTarget GetQueryTarget(Expression expression)
-        {
-            var alias = this.expressionHelper.GetParameterName(expression);
-            var table = this.reflectionHelper.GetTableName(expression.Type);
-            var managedAlias = this.aliasManager.FindByAssociation(table)?.FirstOrDefault()?.Name ?? alias;
-            managedAlias = this.aliasManager.Add(managedAlias, table);
-            var existing = this.context.QueryTargets.FirstOrDefault(t => t.Alias == managedAlias);
-
-            if (existing != null) return existing;
-
-            existing = QueryTargets.TableTarget.Create(managedAlias, managedAlias);
-            this.context.AddQueryTarget(existing);
-            return existing;
-        }
-
-        private bool ParseAndOr(BinaryExpression binaryExpression, out IWhere result)
+        private bool ParseAndOr(BinaryExpression binaryExpression, IQueryContextInternal context, out IWhere result)
         {
             result = null;
             if (binaryExpression == null) return false;
@@ -70,16 +48,16 @@ namespace pdq.state.Utilities.Parsers
 
             if (binaryExpression.NodeType == ExpressionType.AndAlso)
             {
-                var leftClause = Parse(binaryExpression.Left);
-                var rightClause = Parse(binaryExpression.Right);
+                var leftClause = Parse(binaryExpression.Left, context);
+                var rightClause = Parse(binaryExpression.Right, context);
 
                 result = And.Where(leftClause, rightClause);
                 return true;
             }
             else if (binaryExpression.NodeType == ExpressionType.OrElse)
             {
-                var leftClause = Parse(binaryExpression.Left);
-                var rightClause = Parse(binaryExpression.Right);
+                var leftClause = Parse(binaryExpression.Left, context);
+                var rightClause = Parse(binaryExpression.Right, context);
 
                 result = Or.Where(leftClause, rightClause);
                 return true;
@@ -88,7 +66,11 @@ namespace pdq.state.Utilities.Parsers
             return false;
         }
 
-        private bool ParseLambdaClause(Expression expression, BinaryExpression binaryExpression, out IWhere result)
+        private bool ParseLambdaClause(
+            Expression expression,
+            BinaryExpression binaryExpression,
+            IQueryContextInternal context,
+            out IWhere result)
         {
             result = null;
             if (expression == null) return false;
@@ -122,18 +104,21 @@ namespace pdq.state.Utilities.Parsers
             var leftParam = (ParameterExpression)leftExpression.Expression;
             var rightParam = (ParameterExpression)rightExpression.Expression;
 
-            result = Conditionals.Column.Match(
-                Column.Create(
-                    reflectionHelper.GetFieldName(leftExpression.Member),
-                    GetQueryTarget(leftParam)),
-                this.expressionHelper.ConvertExpressionTypeToEqualityOperator(operation.NodeType),
-                Column.Create(
-                    reflectionHelper.GetFieldName(rightExpression.Member),
-                    GetQueryTarget(rightParam)));
+            var leftTarget = context.AddQueryTarget(leftParam);
+            var leftField = reflectionHelper.GetFieldName(leftExpression.Member);
+            var op = this.expressionHelper.ConvertExpressionTypeToEqualityOperator(operation.NodeType);
+            var rightTarget = context.AddQueryTarget(rightParam);
+            var rightField = reflectionHelper.GetFieldName(rightExpression.Member);
+
+            result = Conditionals.Column.Equals(
+                Column.Create(leftField, leftTarget),
+                op,
+                Column.Create(rightField, rightTarget)
+            );
             return true;
         }
 
-        private IWhere ParseSimpleBinary(Expression expression)
+        private IWhere ParseSimpleBinary(Expression expression, IQueryContextInternal context)
         {
             if (!(expression is BinaryExpression)) return null;
 
@@ -151,10 +136,10 @@ namespace pdq.state.Utilities.Parsers
             var op = this.expressionHelper.ConvertExpressionTypeToEqualityOperator(operation.NodeType);
 
             // create column
-            return Conditionals.Column.Match(
-                Column.Create(leftField, GetQueryTarget(left)),
+            return Conditionals.Column.Equals(
+                Column.Create(leftField, context.GetQueryTarget(left)),
                 op,
-                Column.Create(rightField, GetQueryTarget(right)));
+                Column.Create(rightField, context.GetQueryTarget(right)));
         }
     }
 }

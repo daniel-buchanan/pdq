@@ -50,6 +50,11 @@ namespace pdq.Implementation
             return Select<T, TDestination>.Create(this.context, this.query);
         }
 
+        public ISelectFromTyped<T, TDestination> Join<TDestination>(Func<ISelectWithAlias, Expression<Func<T, TDestination, bool>>> query, JoinType type = JoinType.Default)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <inheritdoc/>
         public IOrderByThenTyped<T> OrderBy(Expression<Func<T, object>> builder, SortOrder order = SortOrder.Ascending)
         {

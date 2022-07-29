@@ -3,7 +3,7 @@ using pdq.common;
 
 namespace pdq.state.Conditionals
 {
-    public class Column<T> : Where
+    public class Column<T> : Where, IColumn
     {
 		internal Column(
 			state.Column column,
@@ -41,5 +41,7 @@ namespace pdq.state.Conditionals
 		public IValueFunction ValueFunction { get; private set; }
 
 		public T Value { get; private set; }
-	}
+
+        object IColumn.Value => Value;
+    }
 }
