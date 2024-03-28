@@ -18,8 +18,8 @@ namespace decaf
         /// </summary>
         /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
         /// <returns></returns>
-        public static IDecafOrmServiceCollection AddDecafOrm(this IServiceCollection services)
-            => AddDecafOrm(services, new DecafOptions());
+        public static IDecafOrmServiceCollection AddDecaf(this IServiceCollection services)
+            => AddDecaf(services, new DecafOptions());
 
         /// <summary>
         /// Add decaf to your <see cref="IServiceCollection"/>, providing an action
@@ -28,13 +28,13 @@ namespace decaf
         /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
         /// <param name="options">An <see cref="Action{T}"/> that resolves the decaf options.</param>
         /// <returns></returns>
-        public static IDecafOrmServiceCollection AddDecafOrm(
+        public static IDecafOrmServiceCollection AddDecaf(
             this IServiceCollection services,
             Action<IDecafOptionsBuilder> options)
         {
             var b = new DecafOptionsBuilder(services);
             options(b);
-            return AddDecafOrm(services, b.Build());
+            return AddDecaf(services, b.Build());
         }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace decaf
         /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
         /// <param name="options">A set of pre-configured <see cref="DecafOptions"/>.</param>
         /// <returns></returns>
-        public static IDecafOrmServiceCollection AddDecafOrm(
+        public static IDecafOrmServiceCollection AddDecaf(
             this IServiceCollection services,
             DecafOptions options)
         {

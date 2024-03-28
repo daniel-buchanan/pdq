@@ -19,7 +19,7 @@ namespace decaf.core_tests
         public TransientExtensionsTests()
         {
             var services = new ServiceCollection();
-            services.AddDecafOrm(o =>
+            services.AddDecaf(o =>
             {
                 o.TrackUnitsOfWork();
                 o.OverrideDefaultLogLevel(LogLevel.Debug);
@@ -29,7 +29,7 @@ namespace decaf.core_tests
 
             var provider = services.BuildServiceProvider();
             var decaf = provider.GetService<IDecaf>();
-            this.unitOfWork = decaf.Begin();
+            this.unitOfWork = decaf.BuildUnit();
         }
 
         [Theory]

@@ -17,7 +17,7 @@ public class QueryServiceGetSql_Tests
     public QueryServiceGetSql_Tests()
     {
         var services = new ServiceCollection();
-        services.AddDecafOrm(o =>
+        services.AddDecaf(o =>
         {
             o.TrackUnitsOfWork();
             o.OverrideDefaultLogLevel(LogLevel.Debug);

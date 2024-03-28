@@ -15,7 +15,7 @@ namespace decaf.core_tests.Connections
         public TransientTests()
         {
             var services = new ServiceCollection();
-            services.AddDecafOrm(o =>
+            services.AddDecaf(o =>
             {
                 o.UseMockDatabase();
             });
@@ -28,7 +28,7 @@ namespace decaf.core_tests.Connections
         public void CanGetTransientSucceeds()
         {
             // Act
-            Action method = () => this.decaf.Begin();
+            Action method = () => this.decaf.BuildUnit();
 
             // Assert
             method.Should().NotThrow();
@@ -38,7 +38,7 @@ namespace decaf.core_tests.Connections
         public void NewTransientHasId()
         {
             // Act
-            var transient = this.decaf.Begin();
+            var transient = this.decaf.BuildUnit();
 
             // Assert
             transient.Should().NotBeNull();
@@ -49,7 +49,7 @@ namespace decaf.core_tests.Connections
         public void CanGetConnectionSucceeds()
         {
             // Arrange
-            var transient = this.decaf.Begin() as IUnitOfWorkExtended;
+            var transient = this.decaf.BuildUnit() as IUnitOfWorkExtended;
 
             // Act
             Func<IConnection> method = () => transient.Connection;
@@ -64,7 +64,7 @@ namespace decaf.core_tests.Connections
         public void CanGetTransactionSucceeds()
         {
             // Arrange
-            var transient = this.decaf.Begin() as IUnitOfWorkExtended;
+            var transient = this.decaf.BuildUnit() as IUnitOfWorkExtended;
 
             // Act
             Func<ITransaction> method = () => transient.Transaction;
@@ -79,7 +79,7 @@ namespace decaf.core_tests.Connections
         public void NotifyQueryDisposed_UnknownQueryDoesNothing()
         {
             // Arrange
-            var transient = this.decaf.Begin() as IUnitOfWorkExtended;
+            var transient = this.decaf.BuildUnit() as IUnitOfWorkExtended;
 
             // Act
             transient.NotifyQueryDisposed(Guid.Empty);

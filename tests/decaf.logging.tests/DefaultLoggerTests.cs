@@ -19,7 +19,7 @@ public class DefaultLoggerTests
     public DefaultLoggerTests()
     {
         var services = new ServiceCollection();
-        services.AddDecafOrm(o =>
+        services.AddDecaf(o =>
             {
                 o.TrackUnitsOfWork()
                     .OverrideDefaultLogLevel(LogLevel.Debug)

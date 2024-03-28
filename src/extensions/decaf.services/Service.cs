@@ -48,7 +48,7 @@ namespace decaf.services
         /// Get the Transient required to begin a query.
         /// </summary>
         /// <returns>Returns a <see cref="IUnitOfWork"/>.</returns>
-        internal IUnitOfWork GetUnitOfWork() => this.unitOfWork ?? this.decaf.Begin();
+        internal IUnitOfWork GetUnitOfWork() => this.unitOfWork ?? this.decaf.BuildUnit();
 
         /// <summary>
         /// Execute the provided query.<br/>

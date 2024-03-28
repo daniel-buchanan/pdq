@@ -8,7 +8,7 @@ using decaf.common.Utilities;
 
 namespace decaf.common.Connections
 {
-    public class UnitOfWork : IUnitOfWorkExtended
+    public sealed class UnitOfWork : IUnitOfWorkExtended
     {
         private readonly IConnection connection;
         private readonly ITransactionInternal transaction;
@@ -18,6 +18,8 @@ namespace decaf.common.Connections
         private readonly DecafOptions options;
         private readonly IHashProvider hashProvider;
         private readonly List<IQueryContainer> queries;
+        private Func<Exception, bool> catchHandler;
+        private Action successHandler;
 
         private UnitOfWork(
             ITransaction transaction,
@@ -68,30 +70,50 @@ namespace decaf.common.Connections
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposing) return;
-            if (this.queries.Any(q => q.Status != QueryStatus.Executed))
+            if (Enumerable.Any(this.queries, q => q.Status != QueryStatus.Executed))
             {
                 this.logger.Warning($"UnitOfWork({Id}) :: One or more queries have not been executed.");
             }
 
+            if (this.transaction.State == TransactionState.Disposed ||
+                this.transaction.State == TransactionState.RolledBack)
+            {
+                this.logger.Warning($"UnitOfWork({Id}) :: Unable to commit, transaction is already in {transaction.State} state.");
+                return;
+            }
+
+            Persist();
+
+            this.logger.Debug($"UnitOfWork({Id}) :: Disposed");
+            this.notifyDisposed(this.Id);
+        }
+
+        private void Persist()
+        {
             try
             {
                 this.logger.Debug($"UnitOfWork({Id}) :: Committing Transaction");
                 this.transaction.Commit();
+                this.successHandler?.Invoke();
             }
             catch (Exception commitException)
             {
                 this.logger.Error(commitException, $"UnitOfWork({Id}) :: Committing Transaction Failed");
+                var reThrow = this.catchHandler?.Invoke(commitException);
                 try
                 {
                     this.logger.Debug($"UnitOfWork({Id}) :: Rolling back Transaction");
                     this.transaction.Rollback();
+                    if (reThrow == true) throw;
                 }
                 catch (Exception rollbackException)
                 {
                     this.logger.Error(rollbackException, $"UnitOfWork({Id}) :: Rolling back Transaction Failed");
+                    reThrow = this.catchHandler?.Invoke(rollbackException);
+                    if (reThrow == true) throw;
                 }
             }
             finally
@@ -102,15 +124,21 @@ namespace decaf.common.Connections
                     this.connection.Close();
                 }
             }
-
-            this.logger.Debug($"UnitOfWork({Id}) :: Disposed");
-            this.notifyDisposed(this.Id);
         }
 
         /// <inheritdoc />
         public IQueryContainer Query()
             => QueryAsync().WaitFor();
 
+        /// <inheritdoc />
+        public IUnitOfWork Query(Action<IQueryContainer> method)
+        {
+            var query = Query();
+            method(query);
+            return this;
+        }
+
+        /// <inheritdoc />
         public Task<IQueryContainer> QueryAsync(CancellationToken cancellationToken = default)
         {
             var query = QueryContainer.Create(this, this.logger, this.hashProvider, this.options);
@@ -120,12 +148,87 @@ namespace decaf.common.Connections
         }
 
         /// <inheritdoc />
+        public async Task<IUnitOfWork> QueryAsync(Func<IQueryContainer, Task> method, CancellationToken cancellationToken = default)
+        {
+            var query = await QueryAsync(cancellationToken);
+            await method(query);
+            return this;
+        }
+
+        /// <inheritdoc />
+        public IUnitOfWork OnException(Action<Exception> handler)
+        {
+            catchHandler = e =>
+            {
+                handler(e);
+                return false;
+            };
+            return this;
+        }
+
+        /// <inheritdoc />
+        public IUnitOfWork OnException(Func<Exception, bool> handler)
+        {
+            catchHandler = handler;
+            return this;
+        }
+
+        /// <inheritdoc />
+        public Task<IUnitOfWork> OnExceptionAsync(Func<Exception, Task> handler, CancellationToken cancellationToken = default)
+        {
+            catchHandler = ex =>
+            {
+                handler(ex).WaitFor(cancellationToken);
+                return false;
+            };
+            var uow = this as IUnitOfWork;
+            return Task.FromResult(uow);
+        }
+
+        /// <inheritdoc />
+        public Task<IUnitOfWork> OnExceptionAsync(Func<Exception, Task<bool>> handler, CancellationToken cancellationToken = default)
+        {
+            catchHandler = ex => handler(ex).WaitFor();
+            return Task.FromResult<IUnitOfWork>(this);
+        }
+
+        /// <inheritdoc />
+        public IUnitOfWork OnSuccess(Action handler)
+        {
+            successHandler = handler;
+            return this;
+        }
+
+        /// <inheritdoc />
+        public Task<IUnitOfWork> OnSuccessAsync(Func<Task> handler, CancellationToken cancellationToken = default)
+        {
+            successHandler = () => handler().WaitFor(cancellationToken);
+            var uow = this as IUnitOfWork;
+            return Task.FromResult(uow);
+        }
+
+        /// <inheritdoc />
+        public IUnitOfWork PersistChanges()
+        {
+            Persist();
+            return this;
+        }
+
+        /// <inheritdoc />
+        public Task<IUnitOfWork> PersistChangesAsync(CancellationToken cancellationToken = default)
+        {
+            Persist();
+            var uow = this as IUnitOfWork;
+            return Task.FromResult(uow);
+        }
+
+        /// <inheritdoc />
         public void NotifyQueryDisposed(Guid queryId)
         {
             var found = this.queries.FirstOrDefault(q => q.Id == queryId);
             if (found == null)
             {
-                this.logger.Debug($"UnitOfWork({Id}) :: Cound not find query with Id - {queryId}");
+                this.logger.Debug($"UnitOfWork({Id}) :: Could not find query with Id - {queryId}");
                 return;
             }
 

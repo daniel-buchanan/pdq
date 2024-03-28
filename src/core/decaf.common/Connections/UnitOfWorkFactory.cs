@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using decaf.common.Exceptions;
 using decaf.common.Logging;
 using decaf.common.Utilities;
 
@@ -16,6 +17,7 @@ namespace decaf.common.Connections
         private readonly ITransactionFactory transactionFactory;
         private readonly ISqlFactory sqlFactory;
         private readonly IHashProvider hashProvider;
+        private readonly IConnectionDetails providedConnectionDetails;
 
         public UnitOfWorkFactory(
             DecafOptions options,
@@ -31,9 +33,32 @@ namespace decaf.common.Connections
             this.sqlFactory = sqlFactory;
             this.hashProvider = hashProvider;
         }
+        
+        public UnitOfWorkFactory(
+            DecafOptions options,
+            ILoggerProxy logger,
+            ITransactionFactory transactionFactory,
+            ISqlFactory sqlFactory,
+            IHashProvider hashProvider,
+            IConnectionDetails connectionDetails) : 
+            this(options, logger, transactionFactory, sqlFactory, hashProvider)
+        {
+            this.providedConnectionDetails = connectionDetails;
+        }
+
+        /// <inheritdoc/>
+        public IUnitOfWork Create() => CreateAsync().WaitFor();
 
         /// <inheritdoc/>
         public IUnitOfWork Create(IConnectionDetails connectionDetails) => CreateAsync(connectionDetails).WaitFor();
+
+        /// <inheritdoc/>
+        public async Task<IUnitOfWork> CreateAsync(CancellationToken cancellationToken = default)
+        {
+            if (this.providedConnectionDetails == null)
+                throw new MissingConnectionDetailsException("No connection details found.");
+            return await CreateAsync(this.providedConnectionDetails, cancellationToken);
+        }
 
         /// <inheritdoc/>
         public async Task<IUnitOfWork> CreateAsync(IConnectionDetails connectionDetails, CancellationToken cancellationToken = default)

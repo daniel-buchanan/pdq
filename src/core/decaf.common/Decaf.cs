@@ -52,37 +52,37 @@ namespace decaf.common
         }
 
         /// <inheritdoc/>
-        public IUnitOfWork Begin()
+        public IUnitOfWork BuildUnit()
             => GetUnitOfWork();
 
         /// <inheritdoc/>
-        public IUnitOfWork Begin(IConnectionDetails connectionDetails)
+        public IUnitOfWork BuildUnit(IConnectionDetails connectionDetails)
             => GetUnitOfWork(connectionDetails);
 
         /// <inheritdoc/>
-        public Task<IUnitOfWork> BeginAsync(CancellationToken cancellationToken = default)
+        public Task<IUnitOfWork> BuildUnitAsync(CancellationToken cancellationToken = default)
             => GetUnitOfWorkAsync(cancellationToken: cancellationToken);
 
         /// <inheritdoc/>
-        public async Task<IUnitOfWork> BeginAsync(
+        public async Task<IUnitOfWork> BuildUnitAsync(
             IConnectionDetails connectionDetails,
             CancellationToken cancellationToken = default)
             => await GetUnitOfWorkAsync(connectionDetails, cancellationToken);
 
         /// <inheritdoc/>
-        public IQueryContainer BeginQuery()
+        public IQueryContainer Query()
             => GetUnitOfWork().Query();
 
         /// <inheritdoc/>
-        public IQueryContainer BeginQuery(IConnectionDetails connectionDetails)
+        public IQueryContainer Query(IConnectionDetails connectionDetails)
             => GetUnitOfWork(connectionDetails).Query();
 
         /// <inheritdoc/>
-        public async Task<IQueryContainer> BeginQueryAsync(CancellationToken cancellationToken = default)
-            => await BeginQueryAsync(null, cancellationToken);
+        public async Task<IQueryContainer> QueryAsync(CancellationToken cancellationToken = default)
+            => await QueryAsync(null, cancellationToken);
 
         /// <inheritdoc/>
-        public async Task<IQueryContainer> BeginQueryAsync(
+        public async Task<IQueryContainer> QueryAsync(
             IConnectionDetails connectionDetails,
             CancellationToken cancellationToken = default)
         {

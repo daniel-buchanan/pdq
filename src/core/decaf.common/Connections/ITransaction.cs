@@ -16,6 +16,8 @@ namespace decaf.common.Connections
 		void Rollback();
 
 		IDbTransaction GetUnderlyingTransaction();
+		
+		TransactionState State { get; }
 	}
 
 	internal interface ITransactionInternal : ITransaction

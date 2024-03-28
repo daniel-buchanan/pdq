@@ -29,13 +29,13 @@ namespace decaf.common.Options
         IDecafOptionsBuilder OverrideDefaultClauseHandling(ClauseHandling handling);
 
         /// <summary>
-        /// Enable tracking of Transients throughout their lifetime, by default
+        /// Enable tracking of <see cref="IUnitOfWork"/> throughout their lifetime. By default
         /// they are not tracked, and unless you explicitly dispose of them they
-        /// not be disposed of until the GC collects them. However if you enable
+        /// may not be disposed of until the GC collects them. However if you enable
         /// tracking they are tracked by the Unit of Work allowing for debugging and
         /// discovery of issues.
         /// </summary>
-        /// <returns>(Fluent API) The ability to continnue further setup actions.</returns>
+        /// <returns>(Fluent API) The ability to continue further setup actions.</returns>
         IDecafOptionsBuilder TrackUnitsOfWork();
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace decaf.common.Options
         /// a new connection to the database. If not enabled (default) then
         /// connections will be re-used for multiple queries across a transaction.
         /// </summary>
-        /// <returns>(Fluent API) The ability to continnue further setup actions.</returns>
+        /// <returns>(Fluent API) The ability to continue further setup actions.</returns>
         IDecafOptionsBuilder CloseConnectionsOnCommitOrRollback();
 
         /// <summary>

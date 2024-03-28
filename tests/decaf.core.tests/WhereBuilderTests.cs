@@ -29,14 +29,14 @@ namespace decaf.core_tests
         public WhereBuilderTests()
         {
             var services = new ServiceCollection();
-            services.AddDecafOrm(b =>
+            services.AddDecaf(b =>
             {
                 b.UseMockDatabase().WithMockConnectionDetails();
             });
             var provider = services.BuildServiceProvider();
             var decaf = provider.GetRequiredService<IDecaf>();
             this.options = provider.GetRequiredService<DecafOptions>();
-            var query = decaf.BeginQuery();
+            var query = decaf.Query();
             var aliasManager = AliasManager.Create();
             var hashProvider = new HashProvider();
             this.context = SelectQueryContext.Create(aliasManager, hashProvider);

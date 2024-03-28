@@ -5,7 +5,7 @@ using decaf.common.Utilities;
 
 namespace decaf.common
 {
-	public class QueryContainer : IQueryContainerInternal
+	public sealed class QueryContainer : IQueryContainerInternal
 	{
 		private readonly ILoggerProxy logger;
 		private readonly IUnitOfWorkExtended unitOfWork;
@@ -98,7 +98,7 @@ namespace decaf.common
 		}
 
 		/// <inheritdoc/>
-		protected virtual void Dispose(bool disposing)
+		private void Dispose(bool disposing)
 		{
 			if (!disposing) return;
 			this.logger.Debug($"Query({Id} :: Disposing({disposing})");

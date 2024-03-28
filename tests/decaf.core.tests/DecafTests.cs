@@ -12,7 +12,7 @@ namespace decaf.core_tests
         static IDecaf GetDecaf(bool needsConnectionDetails = false)
         {
             var services = new ServiceCollection();
-            services.AddDecafOrm(b =>
+            services.AddDecaf(b =>
             {
                 b.InjectUnitOfWorkAsScoped();
                 b.UseMockDatabase();
@@ -29,7 +29,7 @@ namespace decaf.core_tests
             var decaf = GetDecaf();
 
             // Act
-            var method = () => decaf.Begin();
+            var method = () => decaf.BuildUnit();
 
             // Assert
             method.Should().Throw<MissingConnectionDetailsException>();
@@ -42,7 +42,7 @@ namespace decaf.core_tests
             var decaf = GetDecaf();
 
             // Act
-            var method = () => decaf.BeginQuery();
+            var method = () => decaf.Query();
 
             // Assert
             method.Should().Throw<MissingConnectionDetailsException>();
@@ -55,7 +55,7 @@ namespace decaf.core_tests
             var decaf = GetDecaf();
 
             // Act
-            var method = () => decaf.BeginAsync();
+            var method = () => decaf.BuildUnitAsync();
 
             // Assert
             method.Should().ThrowAsync<MissingConnectionDetailsException>();
@@ -68,7 +68,7 @@ namespace decaf.core_tests
             var decaf = GetDecaf();
 
             // Act
-            var method = () => decaf.BeginQueryAsync();
+            var method = () => decaf.QueryAsync();
 
             // Assert
             method.Should().ThrowAsync<MissingConnectionDetailsException>();
@@ -82,7 +82,7 @@ namespace decaf.core_tests
             var connectionDetails = new MockConnectionDetails();
 
             // Act
-            var method = () => decaf.Begin(connectionDetails);
+            var method = () => decaf.BuildUnit(connectionDetails);
 
             // Assert
             method.Should().NotThrow<MissingConnectionDetailsException>();
@@ -96,7 +96,7 @@ namespace decaf.core_tests
             var connectionDetails = new MockConnectionDetails();
 
             // Act
-            var method = () => decaf.BeginQuery(connectionDetails);
+            var method = () => decaf.Query(connectionDetails);
 
             // Assert
             method.Should().NotThrow<MissingConnectionDetailsException>();
@@ -110,7 +110,7 @@ namespace decaf.core_tests
             var connectionDetails = new MockConnectionDetails();
 
             // Act
-            var method = () => decaf.BeginAsync(connectionDetails);
+            var method = () => decaf.BuildUnitAsync(connectionDetails);
 
             // Assert
             method.Should().NotThrowAsync<MissingConnectionDetailsException>();
@@ -124,7 +124,7 @@ namespace decaf.core_tests
             var connectionDetails = new MockConnectionDetails();
 
             // Act
-            var method = () => decaf.BeginQueryAsync(connectionDetails);
+            var method = () => decaf.QueryAsync(connectionDetails);
 
             // Assert
             method.Should().NotThrowAsync<MissingConnectionDetailsException>();

@@ -7,18 +7,31 @@ namespace decaf.common.Connections
 	public interface IUnitOfWorkFactory : IDisposable
 	{
 		/// <summary>
-		/// 
+		/// Create a new unit of work, using connection details provided through the DI Container.
 		/// </summary>
-		/// <param name="connectionDetails"></param>
-		/// <returns></returns>
+		/// <returns>A new <see cref="IUnitOfWork"/>.</returns>
+		IUnitOfWork Create();
+		
+		/// <summary>
+		/// Create a new unit of work, using provided connection details.
+		/// </summary>
+		/// <param name="connectionDetails">The details of the connection to use.</param>
+		/// <returns>A new <see cref="IUnitOfWork"/>.</returns>
 		IUnitOfWork Create(IConnectionDetails connectionDetails);
 
 		/// <summary>
-		/// 
+		/// (awaitable) Create a new unit of work, using connection details provided through the DI Container.
 		/// </summary>
-		/// <param name="connectionDetails"></param>
-		/// <param name="cancellationToken"></param>
-		/// <returns></returns>
+		/// <param name="cancellationToken">The cancellation token.</param>
+		/// <returns>A new <see cref="IUnitOfWork"/>.</returns>
+		Task<IUnitOfWork> CreateAsync(CancellationToken cancellationToken = default);
+		
+		/// <summary>
+		/// (awaitable) Create a new unit of work, using provided connection details.
+		/// </summary>
+		/// <param name="connectionDetails">The details of the connection to use.</param>
+		/// <param name="cancellationToken">The cancellation token.</param>
+		/// <returns>A new <see cref="IUnitOfWork"/>.</returns>
 		Task<IUnitOfWork> CreateAsync(IConnectionDetails connectionDetails, CancellationToken cancellationToken = default);
 	}
 

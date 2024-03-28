@@ -9,7 +9,7 @@ using decaf.tests.common.Mocks;
 using decaf.tests.common.Models;
 
 var services = new ServiceCollection();
-services.AddDecafOrm(o =>
+services.AddDecaf(o =>
 {
     o.TrackUnitsOfWork()
         .OverrideDefaultLogLevel(LogLevel.Debug)
@@ -22,7 +22,7 @@ var provider = services.BuildServiceProvider();
 Console.WriteLine("Hello, World!");
 
 var decaf = provider.GetService<IDecaf>();
-using (var q = decaf.BeginQuery())
+using (var q = decaf.Query())
 {
     q.Select()
         .From("bob", "b")

@@ -19,7 +19,7 @@ namespace decaf.services.tests.Command
         public CommandServiceTests()
         {
             var services = new ServiceCollection();
-            services.AddDecafOrm(o =>
+            services.AddDecaf(o =>
             {
                 o.TrackUnitsOfWork();
                 o.OverrideDefaultLogLevel(LogLevel.Debug);

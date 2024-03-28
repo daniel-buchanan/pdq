@@ -18,7 +18,7 @@ namespace decaf.services.tests.Query
         public QueryServiceWithKey3Tests()
         {
             var services = new ServiceCollection();
-            services.AddDecafOrm(o =>
+            services.AddDecaf(o =>
             {
                 o.TrackUnitsOfWork();
                 o.OverrideDefaultLogLevel(LogLevel.Debug);

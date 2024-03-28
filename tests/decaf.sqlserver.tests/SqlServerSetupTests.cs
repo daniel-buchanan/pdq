@@ -16,7 +16,7 @@ namespace decaf.sqlserver.tests
 		public SqlServerSetupTests()
 		{
             services = new ServiceCollection();
-            services.AddDecafOrm(o =>
+            services.AddDecaf(o =>
             {
                 o.TrackUnitsOfWork()
                     .OverrideDefaultLogLevel(LogLevel.Debug)

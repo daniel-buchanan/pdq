@@ -12,7 +12,7 @@ namespace decaf.sqlserver.tests
 		public SqlServerTest(bool disableHeaderComments = true)
 		{
             services = new ServiceCollection();
-            services.AddDecafOrm(o =>
+            services.AddDecaf(o =>
             {
                 o.TrackUnitsOfWork()
                     .OverrideDefaultLogLevel(LogLevel.Debug)

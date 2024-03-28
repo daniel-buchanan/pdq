@@ -10,6 +10,7 @@ namespace decaf.common.Connections
         protected readonly IConnection connection;
         protected readonly DecafOptions options;
         protected IDbTransaction transaction;
+        private TransactionState state;
 
 		protected Transaction(
             Guid id,
@@ -21,6 +22,7 @@ namespace decaf.common.Connections
             this.logger = logger;
             this.connection = connection;
             this.options = options;
+            this.state = TransactionState.Created;
 
             this.logger.Debug($"ITransaction({Id}) :: Transaction created");
 		}
@@ -41,6 +43,7 @@ namespace decaf.common.Connections
 
             this.logger.Debug($"ITransaction({Id}) :: Beginning Transaction");
             this.transaction = GetUnderlyingTransaction();
+            this.state = TransactionState.Begun;
         }
 
         /// <inheritdoc/>
@@ -50,6 +53,7 @@ namespace decaf.common.Connections
             {
                 this.logger.Debug($"ITransaction({Id}) :: Committing Transaction");
                 this.transaction.Commit();
+                this.state = TransactionState.Committed;
                 this.logger.Debug($"ITransaction({Id}) :: Commit SUCCEEDED");
             }
             catch (Exception commitEx)
@@ -64,6 +68,8 @@ namespace decaf.common.Connections
                 {
                     this.logger.Error(rollbackEx, $"ITransaction({Id}) :: Rollback FAILED");
                 }
+
+                this.state = TransactionState.RolledBack;
             }
             finally
             {
@@ -82,6 +88,7 @@ namespace decaf.common.Connections
         {
             if (!disposing) return;
             this.transaction = null;
+            this.state = TransactionState.Disposed;
         }
 
         /// <inheritdoc/>
@@ -97,10 +104,17 @@ namespace decaf.common.Connections
             {
                 this.logger.Error(rollbackEx, $"ITransaction({Id}) :: Rollback FAILED");
             }
+            finally
+            {
+                this.state = TransactionState.RolledBack;
+            }
         }
 
         /// <inheritdoc/>
         public abstract IDbTransaction GetUnderlyingTransaction();
+
+        /// <inheritdoc/>
+        public TransactionState State => this.state;
     }
 }
 
