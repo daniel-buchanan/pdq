@@ -1,7 +1,7 @@
-﻿using decaf.common.Utilities;
+using decaf.common.Utilities;
 using decaf.db.common.Builders;
 
-namespace decaf.npgsql.Builders
+namespace decaf.sqlite.Builders
 {
     public class DeleteBuilderPipeline : db.common.ANSISQL.DeleteBuilderPipeline
     {
@@ -17,4 +17,3 @@ namespace decaf.npgsql.Builders
         }
     }
 }
-

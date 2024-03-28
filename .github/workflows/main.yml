@@ -35,6 +35,8 @@ jobs:
               - 'src/db/decaf.npgsql/**'
             sqlserver:
               - 'src/db/decaf.sqlserver/**'
+            sqlite:
+              - 'src/db/decaf.sqlite/**'
             services:
               - 'src/extensions/decaf.services/**'
             logging_serilog:
@@ -44,6 +46,7 @@ jobs:
       run-db: ${{ steps.changes.outputs.db }}
       run-npgsql: ${{ steps.changes.outputs.npgsql }}
       run-sqlserver: ${{ steps.changes.outputs.sqlserver }}
+      run-sqlite: ${{ steps.changes.outputs.sqlite }}
       run-services: ${{ steps.changes.outputs.services }}
       run-logging-serilog: ${{ steps.changes.outputs.logging_serilog }}
 
@@ -73,6 +76,13 @@ jobs:
     needs: [check-paths]
     if: ${{ needs.check-paths.outputs.run-sqlserver == 'true' }}
     uses: ./.github/workflows/publish-decaf.db.sqlserver.yml
+    secrets: inherit
+  
+  pub-decafsqlite:
+    name: decaf.sqlite
+    needs: [check-paths]
+    if: ${{ needs.check-paths.outputs.run-sqlite == 'true' }}
+    uses: ./.github/workflows/publish-decaf.db.sqlite.yml
     secrets: inherit
 
   pub-decafservices:

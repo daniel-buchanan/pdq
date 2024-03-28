@@ -19,6 +19,8 @@ jobs:
               - 'src/db/decaf.npgsql/**'
             sqlserver:
               - 'src/db/decaf.sqlserver/**'
+            sqlite:
+              - 'src/db/decaf.sqlite/**'
             services:
               - 'src/extensions/decaf.services/**'
             logging:
@@ -29,6 +31,7 @@ jobs:
       run-services: ${{ steps.changes.outputs.services }}
       run-npgsql: ${{ steps.changes.outputs.npgsql }}
       run-sqlserver: ${{ steps.changes.outputs.sqlserver }}
+      run-sqlite: ${{ steps.changes.outputs.sqlite }}
       run-logging: ${{ steps.changes.outputs.logging }}
 
   test-decaf:
@@ -80,6 +83,17 @@ jobs:
     with:
       job-name: decaf.sqlserver
       test-project: tests/decaf.sqlserver.tests/decaf.sqlserver.tests.csproj
+
+  test-decafsqlite:
+    needs: [check-paths]
+    name: test-decafsqlite
+    if: ${{ needs.check-paths.outputs.run-sqlite == 'true' }}
+    uses: ./.github/workflows/test-run.yml
+    secrets: inherit
+    with:
+      job-name: decaf.sqlite
+      test-project: tests/decaf.sqlite.tests/decaf.sqlite.tests.csproj
+  
   test-decaflogging:
     needs: [check-paths]
     name: test-decaflogging

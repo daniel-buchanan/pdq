@@ -1,0 +1,50 @@
+name: Publish
+on:
+  workflow_call:
+env:
+  FULL_PACKAGE_VERSION: ${{ format('0.1.{0}+{1}', github.run_number, github.sha) }}
+  PACKAGE_VERSION: ${{ format('0.1.{0}', github.run_number) }}
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Pack
+        env:
+          CSPROJ: src/db/decaf.sqlite/decaf.sqlite-nuget.csproj
+        run: |
+          dotnet add ${CSPROJ} package decaf-orm --version ${{ vars.LATEST_DECAF }} --no-restore
+          dotnet add ${CSPROJ} package decaf-orm.db --version ${{ vars.LATEST_DB }} --no-restore
+          dotnet nuget locals all --clear
+          dotnet restore ${CSPROJ}
+          dotnet build ${CSPROJ} -c Release
+          dotnet pack ${CSPROJ} -p:Version=${FULL_PACKAGE_VERSION} -o ./output
+      - name: Save Archive
+        uses: actions/upload-artifact@v2.2.4
+        with:
+          name: package
+          path: ./output
+          retention-days: 0
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [pack]
+    steps:
+    - name: Download Artifact
+      uses: actions/download-artifact@v2.0.10
+      with:
+        name: package
+        path: ./output
+    - name: Upload to NuGet
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        PACKAGE_NAME: ${{ format('decaf-orm.sqlite.{0}.nupkg', env.PACKAGE_VERSION) }}
+      run: |
+        dotnet nuget push ./output/${PACKAGE_NAME} \
+          -k ${NUGET_API_KEY} \
+          -s https://api.nuget.org/v3/index.json
+    - name: Persist Version
+      env:
+        GH_TOKEN: ${{ secrets.GH_CLI_PAT }}
+      run: |
+        gh variable set LATEST_SQLITE --body=${PACKAGE_VERSION} -R daniel-buchanan/decaf-orm

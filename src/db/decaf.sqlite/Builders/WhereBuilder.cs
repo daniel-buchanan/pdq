@@ -1,6 +1,6 @@
-﻿using decaf.db.common.Builders;
+using decaf.db.common.Builders;
 
-namespace decaf.npgsql.Builders
+namespace decaf.sqlite.Builders
 {
     public class WhereBuilder : db.common.ANSISQL.WhereBuilder
     {
@@ -12,4 +12,3 @@ namespace decaf.npgsql.Builders
         }
     }
 }
-
